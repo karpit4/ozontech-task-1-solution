@@ -1,0 +1,166 @@
+import math
+from dataclasses import dataclass
+
+import numpy as np
+import open3d as o3d
+
+
+@dataclass
+class GroundTruth:
+    length_mm: float
+    width_mm: float
+    height_mm: float
+    yaw_deg: float
+
+    @property
+    def dimensions(self):
+        return np.array(
+            [self.length_mm, self.width_mm, self.height_mm],
+            dtype=float,
+        )
+
+
+class SyntheticScene:
+    """
+    Синтетическая сцена:
+      z = 0                 -> conveyor
+      object sits on z=0
+      object is rotated around Z
+    """
+
+    def __init__(self, cfg):
+        self.cfg = cfg
+
+    @staticmethod
+    def _rotation_z(deg):
+        a = math.radians(deg)
+        c, s = math.cos(a), math.sin(a)
+        return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]], dtype=float)
+
+    def make_box(self, dims_mm, yaw_deg=0.0):
+        L, W, H = dims_mm
+
+        # Uniform samples on six faces.
+        n = max(self.cfg.object_points // 6, 100)
+
+        u = np.random.rand(n)
+        v = np.random.rand(n)
+
+        faces = []
+
+        # x = +/- L/2
+        for sign in (-1, 1):
+            pts = np.column_stack([
+                np.full(n, sign * L / 2),
+                (u - 0.5) * W,
+                v * H,
+            ])
+            faces.append(pts)
+
+        # y = +/- W/2
+        for sign in (-1, 1):
+            pts = np.column_stack([
+                (u - 0.5) * L,
+                np.full(n, sign * W / 2),
+                v * H,
+            ])
+            faces.append(pts)
+
+        # z = 0 / H
+        for sign in (0, 1):
+            pts = np.column_stack([
+                (u - 0.5) * L,
+                (v - 0.5) * W,
+                np.full(n, sign * H),
+            ])
+            faces.append(pts)
+
+        points = np.vstack(faces)
+
+        R = self._rotation_z(yaw_deg)
+        points = points @ R.T
+
+        # Put the lowest point exactly on the conveyor.
+        points[:, 2] -= points[:, 2].min()
+
+        # Depth noise.
+        points += np.random.normal(
+            scale=self.cfg.depth_noise_std_mm,
+            size=points.shape,
+        )
+
+        return points
+
+    def make_irregular_object(self, dims_mm, yaw_deg=0.0):
+        """
+        Небольшая демонстрация произвольной формы:
+        базовый box + цилиндрический выступ сверху.
+        """
+        L, W, H = dims_mm
+
+        box = self.make_box((L, W, H * 0.75), yaw_deg)
+
+        n = self.cfg.object_points // 4
+        theta = np.random.uniform(0, 2 * np.pi, n)
+        radius = min(L, W) * 0.12
+        r = radius * np.sqrt(np.random.rand(n))
+
+        x = r * np.cos(theta)
+        y = r * np.sin(theta)
+        z = H * 0.75 + np.random.rand(n) * (H * 0.25)
+
+        bump = np.column_stack([x, y, z])
+        R = self._rotation_z(yaw_deg)
+        bump = bump @ R.T
+        bump += np.random.normal(
+            scale=self.cfg.depth_noise_std_mm,
+            size=bump.shape,
+        )
+
+        return np.vstack([box, bump])
+
+    def make_conveyor(self):
+        x = np.random.uniform(
+            -self.cfg.conveyor_length_mm / 2,
+            self.cfg.conveyor_length_mm / 2,
+            self.cfg.conveyor_points,
+        )
+        y = np.random.uniform(
+            -self.cfg.conveyor_width_mm / 2,
+            self.cfg.conveyor_width_mm / 2,
+            self.cfg.conveyor_points,
+        )
+        z = np.random.normal(
+            0,
+            self.cfg.depth_noise_std_mm * 0.35,
+            self.cfg.conveyor_points,
+        )
+        return np.column_stack([x, y, z])
+
+    def create_scene(self, dims_mm, yaw_deg=0.0, irregular=False):
+        gt = GroundTruth(
+            length_mm=dims_mm[0],
+            width_mm=dims_mm[1],
+            height_mm=dims_mm[2],
+            yaw_deg=yaw_deg,
+        )
+
+        if irregular:
+            obj = self.make_irregular_object(dims_mm, yaw_deg)
+        else:
+            obj = self.make_box(dims_mm, yaw_deg)
+
+        conveyor = self.make_conveyor()
+
+        # Random depth outliers.
+        outliers = np.column_stack([
+            np.random.uniform(-600, 600, self.cfg.outlier_points),
+            np.random.uniform(-300, 300, self.cfg.outlier_points),
+            np.random.uniform(0, 350, self.cfg.outlier_points),
+        ])
+
+        cloud = np.vstack([conveyor, obj, outliers])
+
+        return o3d.geometry.PointCloud(
+            o3d.utility.Vector3dVector(cloud / 1000.0)
+        ), gt
