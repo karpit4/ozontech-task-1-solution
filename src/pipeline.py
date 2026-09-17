@@ -61,20 +61,34 @@ class DimensioningPipeline:
         """
         Удаляем мелкие компоненты после удаления конвейера.
         """
+
         if len(cloud.points) < self.cfg.min_object_points:
             return cloud
 
-        labels, counts, _ = cloud.cluster_dbscan(
-            eps=0.012,
-            min_points=20,
-            print_progress=False,
+        labels = np.asarray(
+            cloud.cluster_dbscan(
+                eps=0.012,
+                min_points=20,
+                print_progress=False,
+            )
         )
 
-        if len(counts) == 0:
+        # -1 означает шум, его не учитываем
+        valid_labels = labels[labels >= 0]
+
+        if len(valid_labels) == 0:
             return cloud
 
-        largest = int(np.argmax(counts))
-        indices = np.where(labels == largest)[0]
+        # Считаем количество точек в каждом кластере
+        unique_labels, counts = np.unique(
+            valid_labels,
+            return_counts=True,
+        )
+
+        # Находим крупнейший кластер
+        largest_label = unique_labels[np.argmax(counts)]
+
+        indices = np.where(labels == largest_label)[0]
 
         return cloud.select_by_index(indices)
 
