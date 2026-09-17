@@ -171,7 +171,7 @@ def plot_result(
             processed[:, 1],
             processed[:, 2],
             s=4,
-            alpha=0.75,
+            alpha=0.3,
             label="processed object",
         )
 
