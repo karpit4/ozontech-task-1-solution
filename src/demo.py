@@ -8,6 +8,10 @@ from .pipeline import DimensioningPipeline
 from .evaluation import evaluate, print_report
 from .visualization import plot_result
 
+OBJECT_DIMS = (400, 300, 150)
+OBJECT_YAW = 90
+
+
 
 def main():
     np.random.seed(42)
@@ -16,13 +20,11 @@ def main():
     scene = SyntheticScene(cfg)
     pipeline = DimensioningPipeline(cfg)
 
-    # Объект из постановки задачи.
-    dims = (200.0, 100.0, 10.0)
 
     cloud, gt = scene.create_scene(
-        dims_mm=dims,
-        yaw_deg=27.0,
-        irregular=False,
+        dims_mm=OBJECT_DIMS,
+        yaw_deg=OBJECT_YAW,
+        irregular=True,
     )
 
     result = pipeline.measure(cloud)

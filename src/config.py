@@ -12,9 +12,9 @@ class Config:
     depth_noise_std_mm: float = 1.5
 
     # Point cloud
-    object_points: int = 12000
-    conveyor_points: int = 9000
-    outlier_points: int = 150
+    object_points: int = 1200
+    conveyor_points: int = 900
+    outlier_points: int = 15
 
     # Filtering
     voxel_size_mm: float = 2.0
