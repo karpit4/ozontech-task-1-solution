@@ -23,10 +23,6 @@ class DimensioningPipeline:
         self.cfg = cfg
 
     def remove_conveyor_plane(self, cloud):
-        """
-        RANSAC plane segmentation.
-        Plane equation: ax + by + cz + d = 0.
-        """
         distance = self.cfg.ransac_distance_mm / 1000.0
 
         plane_model, inliers = cloud.segment_plane(
@@ -35,8 +31,30 @@ class DimensioningPipeline:
             num_iterations=self.cfg.ransac_iterations,
         )
 
-        object_cloud = cloud.select_by_index(inliers, invert=True)
-        return object_cloud, plane_model, inliers
+        # Нормаль плоскости конвейера
+        normal = np.asarray(plane_model[:3], dtype=float)
+        normal /= np.linalg.norm(normal)
+
+        # Переводим точки в numpy
+        points = np.asarray(cloud.points)
+
+        # Расстояние каждой точки до найденной плоскости
+        signed_distance = (
+            points @ normal + plane_model[3]
+        )
+
+        # Оставляем только точки, расположенные выше конвейера.
+        # Небольшой допуск нужен из-за шума глубины.
+        keep = signed_distance > distance
+
+        object_cloud = cloud.select_by_index(
+            np.where(keep)[0]
+        )
+
+        # Индексы точек, которые были удалены
+        removed = np.where(~keep)[0]
+
+        return object_cloud, plane_model, removed
 
     def filter_outliers(self, cloud):
         if len(cloud.points) == 0:

@@ -8,7 +8,7 @@ from .pipeline import DimensioningPipeline
 from .evaluation import evaluate, print_report
 from .visualization import plot_result
 
-OBJECT_DIMS = (20, 20, 20) #L,W,H
+OBJECT_DIMS = (200, 300, 250) #L,W,H
 OBJECT_YAW = 90
 
 
