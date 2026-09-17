@@ -29,28 +29,15 @@ def _set_equal_aspect(ax, points):
         center[2] + half_range,
     )
 
-
 def _draw_obb(ax, obb):
     """Draw oriented bounding box."""
 
     corners = np.asarray(obb.get_box_points()) * 1000.0
 
-    # Open3D returns 8 vertices of the bounding box.
     edges = [
-        (0, 1),
-        (1, 7),
-        (7, 2),
-        (2, 0),
-
-        (3, 6),
-        (6, 5),
-        (5, 4),
-        (4, 3),
-
-        (0, 3),
-        (1, 6),
-        (7, 5),
-        (2, 4),
+        (0, 1), (1, 7), (7, 2), (2, 0),  # передняя грань
+        (3, 6), (6, 4), (4, 5), (5, 3),  # задняя грань
+        (0, 3), (1, 6), (2, 5), (7, 4),  # соединяющие рёбра
     ]
 
     for a, b in edges:
@@ -62,13 +49,12 @@ def _draw_obb(ax, obb):
             label="_nolegend_",
         )
 
-    # Mark the OBB vertices.
     ax.scatter(
         corners[:, 0],
         corners[:, 1],
         corners[:, 2],
         s=20,
-        label="MOBB corners",
+        label="OBB corners",
     )
 
     return corners

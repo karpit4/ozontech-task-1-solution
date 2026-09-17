@@ -36,7 +36,6 @@ class DimensioningPipeline:
         )
 
         object_cloud = cloud.select_by_index(inliers, invert=True)
-        print(len(object_cloud.points))
         return object_cloud, plane_model, inliers
 
     def filter_outliers(self, cloud):
@@ -55,7 +54,6 @@ class DimensioningPipeline:
             std_ratio=self.cfg.sor_std_ratio,
         )
 
-        print(len(filtered.points))
         return filtered
 
     def keep_main_component(self, cloud):
@@ -68,7 +66,7 @@ class DimensioningPipeline:
 
         labels = np.asarray(
             cloud.cluster_dbscan(
-                eps=0.012,
+                eps=0.032,
                 min_points=20,
                 print_progress=False,
             )
@@ -91,7 +89,6 @@ class DimensioningPipeline:
 
         indices = np.where(labels == largest_label)[0]
         newcloud = cloud.select_by_index(indices)
-        print(len(newcloud.points))
         return newcloud
 
     def minimum_obb(self, cloud):
@@ -127,7 +124,6 @@ class DimensioningPipeline:
 
         filtered = self.filter_outliers(object_cloud)
         # filtered = self.keep_main_component(filtered)
-
         measurement, obb, hull = self.minimum_obb(filtered)
 
         return {
