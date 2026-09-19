@@ -35,7 +35,7 @@ def main():
         cloud, gt = scene.create_scene(
             dims_mm=dims,
             yaw_deg=np.random.uniform(0, 90),
-            irregular=False,
+            shape="box",
         )
 
         t0 = time.perf_counter()

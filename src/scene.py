@@ -91,7 +91,7 @@ class SyntheticScene:
 
         return points
 
-    def make_irregular_object(self, dims_mm, yaw_deg=0.0):
+    def make_bottle(self, dims_mm, yaw_deg=0.0):
         """
         Коробка + цилиндрический выступ сверху.
 
@@ -145,6 +145,56 @@ class SyntheticScene:
 
         return np.vstack([box, bump])
 
+    def make_cylinder(self, dims_mm, yaw_deg=0.0):
+        """
+        Вертикальный цилиндр, стоящий на ленте.
+
+        dims_mm = (D, D, H): диаметр берётся из первого элемента,
+        высота из третьего. Точки лежат только на поверхности: на боковой
+        стенке и на верхней крышке. Нижняя крышка не сэмплируется, так как
+        она лежит на ленте и снаружи не видна.
+        """
+        L, _, H = dims_mm
+        radius = L / 2.0
+
+        n_total = self.cfg.object_points
+
+        # Делим точки между стенкой и крышкой пропорционально площади,
+        # чтобы плотность была одинаковой.
+        side_area = 2.0 * np.pi * radius * H
+        top_area = np.pi * radius ** 2
+        n_side = int(round(n_total * side_area / (side_area + top_area)))
+        n_top = n_total - n_side
+
+        # Боковая стенка: равномерно по углу и по высоте.
+        theta_side = np.random.uniform(0, 2 * np.pi, n_side)
+        side = np.column_stack([
+            radius * np.cos(theta_side),
+            radius * np.sin(theta_side),
+            np.random.rand(n_side) * H,
+        ])
+
+        # Верхняя крышка: sqrt даёт равномерное распределение по площади диска.
+        theta_top = np.random.uniform(0, 2 * np.pi, n_top)
+        r_top = radius * np.sqrt(np.random.rand(n_top))
+        top = np.column_stack([
+            r_top * np.cos(theta_top),
+            r_top * np.sin(theta_top),
+            np.full(n_top, H),
+        ])
+
+        points = np.vstack([side, top])
+
+        R = self._rotation_z(yaw_deg)
+        points = points @ R.T
+
+        points += np.random.normal(
+            scale=self.cfg.depth_noise_std_mm,
+            size=points.shape,
+        )
+
+        return points
+
     def make_conveyor(self):
         x = np.random.uniform(
             -self.cfg.conveyor_length_mm / 2,
@@ -163,7 +213,13 @@ class SyntheticScene:
         )
         return np.column_stack([x, y, z])
 
-    def create_scene(self, dims_mm, yaw_deg=0.0, irregular=False):
+    def create_scene(self, dims_mm, yaw_deg=0.0, shape = "box"):
+        if shape not in ("box", "cylinder", "bottle"):
+            raise ValueError (f"Unknown shape : {shape}")
+        
+        if shape == "cylinder":
+            dims_mm = (dims_mm[0],dims_mm[0],dims_mm[2])
+        
         gt = GroundTruth(
             length_mm=dims_mm[0],
             width_mm=dims_mm[1],
@@ -171,10 +227,12 @@ class SyntheticScene:
             yaw_deg=yaw_deg,
         )
 
-        if irregular:
-            obj = self.make_irregular_object(dims_mm, yaw_deg)
-        else:
+        if shape=="bottle":
+            obj = self.make_bottle(dims_mm, yaw_deg)
+        elif shape == "box":
             obj = self.make_box(dims_mm, yaw_deg)
+        elif shape == "cylinder":
+            obj = self.make_cylinder(dims_mm, yaw_deg)
 
         conveyor = self.make_conveyor()
 

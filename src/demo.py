@@ -22,7 +22,7 @@ def main():
     cloud, gt = scene.create_scene(
         dims_mm=Config.OBJECT_DIMS,
         yaw_deg=Config.OBJECT_YAW,
-        irregular=True,
+        shape="bottle",
     )
 
     result = pipeline.measure(cloud)
