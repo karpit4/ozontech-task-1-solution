@@ -93,23 +93,49 @@ class SyntheticScene:
 
     def make_irregular_object(self, dims_mm, yaw_deg=0.0):
         """
-        Небольшая демонстрация произвольной формы:
-        базовый box + цилиндрический выступ сверху.
+        Коробка + цилиндрический выступ сверху.
+
+        Точки цилиндра лежат только на его поверхности: на боковой стенке
+        и на верхней крышке. Нижняя крышка не сэмплируется, потому что она
+        прилегает к коробке и снаружи не видна.
         """
         L, W, H = dims_mm
 
-        box = self.make_box((L, W, H * 0.75), yaw_deg)
+        box_h = H * 0.75
+        box = self.make_box((L, W, box_h), yaw_deg)
 
-        n = self.cfg.object_points // 4
-        theta = np.random.uniform(0, 2 * np.pi, n)
         radius = min(L, W) * 0.12
-        r = radius * np.sqrt(np.random.rand(n))
+        height = H - box_h
 
-        x = r * np.cos(theta)
-        y = r * np.sin(theta)
-        z = H * 0.75 + np.random.rand(n) * (H * 0.25)
+        n_total = self.cfg.object_points // 20
 
-        bump = np.column_stack([x, y, z])
+        # Делим точки между боковой стенкой и крышкой пропорционально площади,
+        # чтобы плотность на обеих частях была одинаковой.
+        side_area = 2.0 * np.pi * radius * height
+        top_area = np.pi * radius ** 2
+        n_side = int(round(n_total * side_area / (side_area + top_area)))
+        n_top = n_total - n_side
+
+        # Боковая стенка: равномерно по углу и по высоте.
+        theta_side = np.random.uniform(0, 2 * np.pi, n_side)
+        side = np.column_stack([
+            radius * np.cos(theta_side),
+            radius * np.sin(theta_side),
+            box_h + np.random.rand(n_side) * height,
+        ])
+
+        # Верхняя крышка: sqrt даёт равномерное распределение по площади диска.
+        theta_top = np.random.uniform(0, 2 * np.pi, n_top)
+        r_top = radius * np.sqrt(np.random.rand(n_top))
+        top = np.column_stack([
+            r_top * np.cos(theta_top),
+            r_top * np.sin(theta_top),
+            np.full(n_top, H),
+        ])
+
+        bump = np.vstack([side, top])
+
+        # Тот же поворот и шум, что и у коробки.
         R = self._rotation_z(yaw_deg)
         bump = bump @ R.T
         bump += np.random.normal(
