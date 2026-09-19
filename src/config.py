@@ -8,8 +8,8 @@ class Config:
     #Object parameters
     object_shape : str = "sphere"
     object_dims : Tuple[float,float,float] = (
-        400,        
-        400,
+        200,        
+        200,
         400
     ) #L, W, H
     object_yaw : float  = 30

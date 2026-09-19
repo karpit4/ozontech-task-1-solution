@@ -9,7 +9,7 @@ from .evaluation import evaluate
 
 # --- Benchmark parameters ---------------------------------------------------
 # N_SIZES - number of object of one shape
-N_SIZES = 25
+N_SIZES = 15
 MIN_SIZE_MM = 10.0
 MAX_SIZE_MM = 400.0
 MAX_YAW_DEG = 90.0

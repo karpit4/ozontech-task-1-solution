@@ -27,7 +27,7 @@ class SyntheticScene:
       object sits on z=0
       object is rotated around Z
     """
-    SHAPES = ("box", "cylinder", "bottle","sphere")
+    SHAPES = ("box", "cylinder", "bottle","sphere","pencil")
     
     def __init__(self, cfg):
         self.cfg = cfg
@@ -212,6 +212,81 @@ class SyntheticScene:
 
         return points
 
+    def make_pencil(self, dims_mm, yaw_deg=0.0):
+        """
+        Cylinder with a cone on top.
+        dims_mm = (D, D, H)
+        """
+        D = dims_mm[0]
+        H = dims_mm[2]
+
+        radius = D / 2.0
+
+        cylinder_h = H * 0.7
+        cone_h = H * 0.3
+
+        n_total = self.cfg.object_points
+
+        cylinder_area = 2.0 * np.pi * radius * cylinder_h
+        top_area = np.pi * radius ** 2
+        cone_slant = np.sqrt(radius ** 2 + cone_h ** 2)
+        cone_area = np.pi * radius * cone_slant
+
+        total_area = cylinder_area + top_area + cone_area
+
+        n_cylinder = int(round(n_total * cylinder_area / total_area))
+        n_top = int(round(n_total * top_area / total_area))
+        n_cone = n_total - n_cylinder - n_top
+
+        # Боковая поверхность цилиндра
+        theta = self.rng.uniform(0, 2 * np.pi, n_cylinder)
+        cylinder = np.column_stack([
+            radius * np.cos(theta),
+            radius * np.sin(theta),
+            self.rng.random(n_cylinder) * cylinder_h,
+        ])
+
+        # Верхняя круглая грань цилиндра
+        theta = self.rng.uniform(0, 2 * np.pi, n_top)
+        r = radius * np.sqrt(self.rng.random(n_top))
+
+        top = np.column_stack([
+            r * np.cos(theta),
+            r * np.sin(theta),
+            np.full(n_top, cylinder_h),
+        ])
+
+        # Боковая поверхность конуса
+        theta = self.rng.uniform(0, 2 * np.pi, n_cone)
+        z = cylinder_h + self.rng.random(n_cone) * cone_h
+
+        # Радиус сечения конуса уменьшается к вершине
+        local_r = radius * (1 - (z - cylinder_h) / cone_h)
+
+        cone = np.column_stack([
+            local_r * np.cos(theta),
+            local_r * np.sin(theta),
+            z,
+        ])
+
+        points = np.vstack([cylinder, top, cone])
+
+        # Поворот вокруг Z
+        R = self._rotation_z(yaw_deg)
+        points = points @ R.T
+
+        # Габарит по высоте уже начинается с z = 0
+        points[:, 2] -= points[:, 2].min()
+
+        # Шум глубины
+        points += self.rng.normal(
+            scale=self.cfg.depth_noise_std_mm,
+            size=points.shape,
+        )
+
+        return points
+
+
     def make_conveyor(self):
         x = self.rng.uniform(
             -self.cfg.conveyor_length_mm / 2,
@@ -234,8 +309,10 @@ class SyntheticScene:
         if shape not in self.SHAPES:
             raise ValueError (f"Unknown shape : {shape}. Available : {self.SHAPES}")
         
-        if shape == "cylinder":
+        if shape in ("cylinder","pencil"):
             dims_mm = (dims_mm[0],dims_mm[0],dims_mm[2])
+        elif shape == "sphere":
+            dims_mm = (dims_mm[0],dims_mm[0],dims_mm[0])
         
         gt = GroundTruth(
             length_mm=dims_mm[0],
@@ -252,6 +329,8 @@ class SyntheticScene:
             obj = self.make_cylinder(dims_mm, yaw_deg)
         elif shape == "sphere":
             obj = self.make_sphere(dims_mm,yaw_deg)
+        elif shape == "pencil":
+            obj = self.make_pencil(dims_mm, yaw_deg)
 
         conveyor = self.make_conveyor()
 
