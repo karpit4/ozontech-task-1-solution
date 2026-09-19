@@ -61,19 +61,82 @@ def _draw_obb(ax, obb):
 
     return corners
 
+PASS_COLOR = "#2e7d32"
+FAIL_COLOR = "#c62828"
+
+# Ширина одного символа моноширинного шрифта в долях размера шрифта
+# (DejaVu Sans Mono, шрифт matplotlib по умолчанию для family="monospace").
+_CHAR_W = 0.602
+_ROW_CHARS = 40  # длина строки таблицы в символах
+
+
+def _draw_report(ax, metrics):
+    """Draw the measurement report as a text panel (no axes, no frame)."""
+
+    ax.axis("off")
+
+    size = 10
+    # Смещение статуса от начала строки: конец строки таблицы + небольшой зазор.
+    status_dx = _ROW_CHARS * _CHAR_W * size + 14
+
+    def put(y, s, color="black", size=size, weight="normal", dx=0.0):
+        ax.annotate(
+            s,
+            xy=(0.0, y),
+            xycoords="axes fraction",
+            xytext=(dx, 0),
+            textcoords="offset points",
+            family="monospace",
+            fontsize=size,
+            fontweight=weight,
+            color=color,
+            ha="left",
+            va="center",
+        )
+
+    def status(ok):
+        return ("PASS", PASS_COLOR) if ok else ("FAIL", FAIL_COLOR)
+
+    y = 0.62
+    put(y, "=== MEASUREMENT RESULT ===", weight="bold")
+
+    y -= 0.07
+    put(
+        y,
+        f"{'[mm]':<5}{'GT':>9}{'pred':>9}{'error':>9}{'tol':>8}",
+        color="dimgray",
+    )
+
+    for i, name in enumerate(("L", "W", "H")):
+        y -= 0.06
+        tol = f"±{metrics['tolerance_mm'][i]:.2f}"
+        put(
+            y,
+            f"{name:<5}"
+            f"{metrics['gt_mm'][i]:>9.2f}"
+            f"{metrics['pred_mm'][i]:>9.2f}"
+            f"{metrics['error_mm'][i]:>+9.2f}"
+            f"{tol:>8}",
+        )
+        text, color = status(metrics["within_tolerance"][i])
+        put(y, text, color=color, weight="bold", dx=status_dx)
+
+    y -= 0.10
+    text, color = status(metrics["pass"])
+    put(y, f"OBJECT: {text}", color=color, size=14, weight="bold")
 
 def plot_result(
     raw_cloud,
     processed_cloud,
     obb,
-    gt,
-    prediction,
+    metrics,
     path,
     seed,
     show=True,
 ):
     """
     Visualize conveyor point cloud, processed object and MOBB.
+    The measurement report is drawn as a text panel next to the 3D plot.
 
     Parameters
     ----------
@@ -86,60 +149,43 @@ def plot_result(
     obb:
         Open3D oriented bounding box.
 
-    gt:
-        Ground-truth object dimensions.
-
-    prediction:
-        Measured dimensions.
+    metrics:
+        Result of evaluation.evaluate(gt, prediction).
 
     path:
-        Path where PNG image will be saved.
+        Path where PNG image (plot + report) will be saved.
+
+    seed:
+        Seed for the visualization-only random downsampling.
 
     show:
-        If True, display an interactive Matplotlib 3D window.
+        If True, display an interactive Matplotlib window.
     """
 
-    # ---------------------------------------------------------
     # Convert meters -> millimeters.
-    # ---------------------------------------------------------
-
     raw = np.asarray(raw_cloud.points) * 1000.0
     processed = np.asarray(processed_cloud.points) * 1000.0
 
-    # ---------------------------------------------------------
     # Downsample only for visualization.
     # The actual measurement is NOT affected.
-    # ---------------------------------------------------------
-
     rng = np.random.default_rng(seed)
 
     if len(raw) > 8000:
-        idx = rng.choice(
-            len(raw),
-            8000,
-            replace=False,
-        )
+        idx = rng.choice(len(raw), 8000, replace=False)
         raw = raw[idx]
 
     if len(processed) > 8000:
-        idx = rng.choice(
-            len(processed),
-            8000,
-            replace=False,
-        )
+        idx = rng.choice(len(processed), 8000, replace=False)
         processed = processed[idx]
 
-    # ---------------------------------------------------------
-    # Create figure.
-    # ---------------------------------------------------------
+    # Figure: 3D plot on the left, text report on the right.
+    fig = plt.figure(figsize=(15, 8))
+    gs = fig.add_gridspec(1, 2, width_ratios=[3, 1.5])
 
-    fig = plt.figure(figsize=(13, 9))
-    ax = fig.add_subplot(111, projection="3d")
+    ax = fig.add_subplot(gs[0, 0], projection="3d")
+    ax_report = fig.add_subplot(gs[0, 1])
 
-    # ---------------------------------------------------------
     # Raw point cloud.
-    # ---------------------------------------------------------
-
     if len(raw) > 0:
         ax.scatter(
             raw[:, 0],
@@ -150,10 +196,7 @@ def plot_result(
             label="raw point cloud",
         )
 
-    # ---------------------------------------------------------
     # Processed object.
-    # ---------------------------------------------------------
-
     if len(processed) > 0:
         ax.scatter(
             processed[:, 0],
@@ -164,74 +207,32 @@ def plot_result(
             label="processed object",
         )
 
-    # ---------------------------------------------------------
     # MOBB.
-    # ---------------------------------------------------------
-
     obb_corners = _draw_obb(ax, obb)
 
     # Include both point cloud and MOBB when calculating
     # visualization limits.
-    all_points = np.vstack(
-        [
-            raw,
-            processed,
-            obb_corners,
-        ]
-    )
-
+    all_points = np.vstack([raw, processed, obb_corners])
     _set_equal_aspect(ax, all_points)
-
-    # ---------------------------------------------------------
-    # Axes.
-    # ---------------------------------------------------------
 
     ax.set_xlabel("X [mm]")
     ax.set_ylabel("Y [mm]")
     ax.set_zlabel("Z [mm]")
-
-    # ---------------------------------------------------------
-    # Title.
-    # ---------------------------------------------------------
-
-    gt_dims = np.round(np.sort(gt.dimensions)[::-1], 1)
-    measured_dims = np.round(np.sort(prediction.dimensions)[::-1], 1)
-    error = np.abs(
-        measured_dims - gt_dims
-    )
-
-    ax.set_title(
-        "Conveyor Dimensioning Demo\n"
-        f"GT: {gt_dims} mm    |    "
-        f"Measured: {measured_dims} mm    |    "
-        f"Error: {np.round(error, 1)} mm"
-    )
-
+    ax.set_title("Conveyor Dimensioning Demo")
     ax.legend()
 
-    # ---------------------------------------------------------
-    # Save PNG.
-    # ---------------------------------------------------------
+    # Measurement report.
+    _draw_report(ax_report, metrics)
 
+    # Save PNG.
     output_path = Path(path)
-    output_path.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     plt.tight_layout()
-    plt.savefig(
-        output_path,
-        dpi=180,
-        bbox_inches="tight",
-    )
+    plt.savefig(output_path, dpi=180, bbox_inches="tight")
 
-    # ---------------------------------------------------------
     # Interactive window.
-    # ---------------------------------------------------------
-
     if show:
         plt.show()
-
     else:
         plt.close(fig)

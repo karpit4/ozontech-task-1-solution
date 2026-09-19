@@ -44,10 +44,9 @@ def main():
             raw_cloud=cloud,
             processed_cloud=result["cloud_filtered"],
             obb=result["obb"],
-            gt=gt,
-            prediction=measurement,
+            metrics=metrics,
             path=out / "dimensioning_result.png",
-            seed = cfg.seed
+            seed=cfg.seed,
         )
 
         print(f"\nVisualization: {out / 'dimensioning_result.png'}")
