@@ -30,6 +30,7 @@ class SyntheticScene:
 
     def __init__(self, cfg):
         self.cfg = cfg
+        self.rng = np.random.default_rng(cfg.seed)
 
     @staticmethod
     def _rotation_z(deg):
@@ -43,8 +44,8 @@ class SyntheticScene:
         # Uniform samples on six faces.
         n = max(self.cfg.object_points // 6, 100)
 
-        u = np.random.rand(n)
-        v = np.random.rand(n)
+        u = self.rng.random(n)
+        v = self.rng.random(n)
 
         faces = []
 
@@ -84,7 +85,7 @@ class SyntheticScene:
         points[:, 2] -= points[:, 2].min()
 
         # Depth noise.
-        points += np.random.normal(
+        points += self.rng.normal(
             scale=self.cfg.depth_noise_std_mm,
             size=points.shape,
         )
@@ -117,16 +118,16 @@ class SyntheticScene:
         n_top = n_total - n_side
 
         # Боковая стенка: равномерно по углу и по высоте.
-        theta_side = np.random.uniform(0, 2 * np.pi, n_side)
+        theta_side = self.rng.uniform(0, 2 * np.pi, n_side)
         side = np.column_stack([
             radius * np.cos(theta_side),
             radius * np.sin(theta_side),
-            box_h + np.random.rand(n_side) * height,
+            box_h + self.rng.random(n_side) * height,
         ])
 
         # Верхняя крышка: sqrt даёт равномерное распределение по площади диска.
-        theta_top = np.random.uniform(0, 2 * np.pi, n_top)
-        r_top = radius * np.sqrt(np.random.rand(n_top))
+        theta_top = self.rng.uniform(0, 2 * np.pi, n_top)
+        r_top = radius * np.sqrt(self.rng.random(n_top))
         top = np.column_stack([
             r_top * np.cos(theta_top),
             r_top * np.sin(theta_top),
@@ -138,7 +139,7 @@ class SyntheticScene:
         # Тот же поворот и шум, что и у коробки.
         R = self._rotation_z(yaw_deg)
         bump = bump @ R.T
-        bump += np.random.normal(
+        bump += self.rng.normal(
             scale=self.cfg.depth_noise_std_mm,
             size=bump.shape,
         )
@@ -167,16 +168,16 @@ class SyntheticScene:
         n_top = n_total - n_side
 
         # Боковая стенка: равномерно по углу и по высоте.
-        theta_side = np.random.uniform(0, 2 * np.pi, n_side)
+        theta_side = self.rng.uniform(0, 2 * np.pi, n_side)
         side = np.column_stack([
             radius * np.cos(theta_side),
             radius * np.sin(theta_side),
-            np.random.rand(n_side) * H,
+            self.rng.random(n_side) * H,
         ])
 
         # Верхняя крышка: sqrt даёт равномерное распределение по площади диска.
-        theta_top = np.random.uniform(0, 2 * np.pi, n_top)
-        r_top = radius * np.sqrt(np.random.rand(n_top))
+        theta_top = self.rng.uniform(0, 2 * np.pi, n_top)
+        r_top = radius * np.sqrt(self.rng.random(n_top))
         top = np.column_stack([
             r_top * np.cos(theta_top),
             r_top * np.sin(theta_top),
@@ -188,7 +189,7 @@ class SyntheticScene:
         R = self._rotation_z(yaw_deg)
         points = points @ R.T
 
-        points += np.random.normal(
+        points += self.rng.normal(
             scale=self.cfg.depth_noise_std_mm,
             size=points.shape,
         )
@@ -196,17 +197,17 @@ class SyntheticScene:
         return points
 
     def make_conveyor(self):
-        x = np.random.uniform(
+        x = self.rng.uniform(
             -self.cfg.conveyor_length_mm / 2,
             self.cfg.conveyor_length_mm / 2,
             self.cfg.conveyor_points,
         )
-        y = np.random.uniform(
+        y = self.rng.uniform(
             -self.cfg.conveyor_width_mm / 2,
             self.cfg.conveyor_width_mm / 2,
             self.cfg.conveyor_points,
         )
-        z = np.random.normal(
+        z = self.rng.normal(
             0,
             self.cfg.depth_noise_std_mm * 0.35,
             self.cfg.conveyor_points,
@@ -238,9 +239,9 @@ class SyntheticScene:
 
         # Random depth outliers.
         outliers = np.column_stack([
-            np.random.uniform(-600, 600, self.cfg.outlier_points),
-            np.random.uniform(-300, 300, self.cfg.outlier_points),
-            np.random.uniform(0, 350, self.cfg.outlier_points),
+            self.rng.uniform(-600, 600, self.cfg.outlier_points),
+            self.rng.uniform(-300, 300, self.cfg.outlier_points),
+            self.rng.uniform(0, 350, self.cfg.outlier_points),
         ])
 
         cloud = np.vstack([conveyor, obj, outliers])

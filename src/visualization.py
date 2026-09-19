@@ -69,6 +69,7 @@ def plot_result(
     gt,
     prediction,
     path,
+    seed,
     show=True,
 ):
     """
@@ -110,7 +111,7 @@ def plot_result(
     # The actual measurement is NOT affected.
     # ---------------------------------------------------------
 
-    rng = np.random.default_rng(42)
+    rng = np.random.default_rng(seed)
 
     if len(raw) > 8000:
         idx = rng.choice(

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-
+import open3d as o3d
 import numpy as np
 
 @dataclass
@@ -19,6 +19,7 @@ class Measurement:
 class DimensioningPipeline:
     def __init__(self, cfg):
         self.cfg = cfg
+        o3d.utility.random.seed(cfg.seed)
 
     def remove_conveyor_plane(self, cloud):
         distance = self.cfg.ransac_distance_mm / 1000.0

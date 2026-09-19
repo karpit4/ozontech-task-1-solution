@@ -3,8 +3,14 @@ from typing import Tuple
 
 @dataclass
 class Config:
+    #Random-state
+    seed : int = 6767
     #Object parameters
-    object_dims : Tuple[float,float,float] = (300, 300, 300) #L,W,H
+    object_dims : Tuple[float,float,float] = (
+        10,        
+        10,
+        10
+    ) #L, W, H
     object_yaw : float  = 30
     
     # Conveyour parameters

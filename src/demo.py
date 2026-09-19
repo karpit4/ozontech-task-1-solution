@@ -12,7 +12,6 @@ from .visualization import plot_result
 
 
 def main():
-    np.random.seed(42)
 
     cfg = Config()
     scene = SyntheticScene(cfg)
@@ -48,6 +47,7 @@ def main():
             gt=gt,
             prediction=measurement,
             path=out / "dimensioning_result.png",
+            seed = cfg.seed
         )
 
         print(f"\nVisualization: {out / 'dimensioning_result.png'}")

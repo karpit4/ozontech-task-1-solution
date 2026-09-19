@@ -8,10 +8,18 @@ from .pipeline import DimensioningPipeline
 from .evaluation import evaluate
 
 
+def fmt(values, spec=".1f"):
+    """Три числа -> '(409.7, 309.4, 299.9)' (обычные float, без np.float64)."""
+    return "(" + ", ".join(format(float(v), spec) for v in values) + ")"
+
 def main():
     cfg = Config()
     scene = SyntheticScene(cfg)
     pipeline = DimensioningPipeline(cfg)
+
+    # Отдельный генератор для углов поворота. Сид сдвинут на 1, чтобы поток
+    # случайных чисел не совпадал с потоком, который использует сцена.
+    yaw_rng = np.random.default_rng(cfg.seed + 1)
 
     test_cases = [
         (10, 10, 10),
@@ -25,16 +33,17 @@ def main():
     times = []
 
     print(
-        f"{'GT [mm]':<22}"
-        f"{'Measured [mm]':<30}"
-        f"{'Time [ms]':<12}"
-        f"{'PASS':<8}"
+        f"{'GT [mm]':<17}"
+        f"{'Measured [mm]':<23}"
+        f"{'Error [mm]':<25}"
+        f"{'Time [ms]':<10}"
+        f"{'Result':<8}"
     )
 
     for dims in test_cases:
         cloud, gt = scene.create_scene(
             dims_mm=dims,
-            yaw_deg=np.random.uniform(0, 90),
+            yaw_deg=yaw_rng.uniform(0, 90),
             shape="box",
         )
 
@@ -46,10 +55,11 @@ def main():
         times.append(elapsed)
 
         print(
-            f"{str(tuple(dims)):<22}"
-            f"{str(tuple(np.round(metrics['pred_mm'], 1))):<30}"
-            f"{elapsed:<12.1f}"
-            f"{str(metrics['pass']):<8}"
+            f"{fmt(metrics['gt_mm'], 'g'):<17}"
+            f"{fmt(metrics['pred_mm']):<23}"
+            f"{fmt(metrics['error_mm'], '+.1f'):<25}"
+            f"{elapsed:<10.1f}"
+            f"{'PASS' if metrics['pass'] else 'FAIL':<8}"
         )
 
     print("\nTiming:")
