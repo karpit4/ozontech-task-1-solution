@@ -7,34 +7,63 @@ from .scene import SyntheticScene
 from .pipeline import DimensioningPipeline
 from .evaluation import evaluate
 
-
-#py -m src.benchmark
-#python -m src.benchmark
+# --- Параметры бенчмарка ---------------------------------------------------
+# Число размеров = число объектов каждой формы.
+N_SIZES = 15
+MIN_SIZE_MM = 10.0
+MAX_SIZE_MM = 400.0
+MAX_YAW_DEG = 90.0
 
 
 def fmt(values, spec=".1f"):
     """Три числа -> '(409.7, 309.4, 299.9)' (обычные float, без np.float64)."""
     return "(" + ", ".join(format(float(v), spec) for v in values) + ")"
 
+
+def plural(word):
+    """'box' -> 'boxes', 'cylinder' -> 'cylinders', 'ability' -> 'abilities'."""
+    if word.endswith(("s", "x", "z", "ch", "sh")):
+        return word + "es"
+    if len(word) > 1 and word.endswith("y") and word[-2] not in "aeiou":
+        return word[:-1] + "ies"
+    return word + "s"
+
+
+def make_sizes():
+    """
+    Кубы со стороной от MIN_SIZE_MM до MAX_SIZE_MM с равным шагом.
+    Возвращает список (L, W, H) в мм.
+    """
+    sides = np.round(np.linspace(MIN_SIZE_MM, MAX_SIZE_MM, N_SIZES))
+    return [(float(s), float(s), float(s)) for s in sides]
+
+
 def main():
     cfg = Config()
     scene = SyntheticScene(cfg)
     pipeline = DimensioningPipeline(cfg)
 
-    # Отдельный генератор для углов поворота. Сид сдвинут на 1, чтобы поток
-    # случайных чисел не совпадал с потоком, который использует сцена.
-    yaw_rng = np.random.default_rng(cfg.seed + 1)
+    shapes = scene.SHAPES
+    sizes = make_sizes()
 
-    test_cases = [
-        (10, 10, 10),
-        (20, 20, 20),
-        (50, 50, 50),
-        (100, 50, 20),
-        (200, 100, 10),
-        (400, 300, 300),
-    ]
+    # Углы поворота берём из отдельного генератора (сид сдвинут на 1, чтобы
+    # его поток не совпадал с потоком сцены) и заранее, по одному на размер:
+    # так они не зависят от числа форм, и i-й объект каждой формы
+    # повёрнут одинаково.
+    yaw_rng = np.random.default_rng(cfg.seed + 1)
+    yaws = yaw_rng.uniform(0, MAX_YAW_DEG, size=len(sizes))
+
+    # Прогрев: первый вызов обычно медленнее остальных, не учитываем его во
+    # времени. Отдельная сцена, чтобы не трогать генератор основной.
+    warm_cloud, _ = SyntheticScene(cfg).create_scene(
+        dims_mm=sizes[len(sizes) // 2],
+        yaw_deg=0.0,
+        shape=shapes[0],
+    )
+    pipeline.measure(warm_cloud)
 
     times = []
+    passed = {shape: 0 for shape in shapes}
 
     print(
         f"{'GT [mm]':<17}"
@@ -44,32 +73,56 @@ def main():
         f"{'Result':<8}"
     )
 
-    for dims in test_cases:
-        cloud, gt = scene.create_scene(
-            dims_mm=dims,
-            yaw_deg=yaw_rng.uniform(0, 90),
-            shape="box",
-        )
+    for shape in shapes:
+        print(f"\n--- {shape} ---")
 
-        t0 = time.perf_counter()
-        result = pipeline.measure(cloud)
-        elapsed = (time.perf_counter() - t0) * 1000
+        for dims, yaw in zip(sizes, yaws):
+            cloud, gt = scene.create_scene(
+                dims_mm=dims,
+                yaw_deg=yaw,
+                shape=shape,
+            )
 
-        metrics = evaluate(gt, result["measurement"])
-        times.append(elapsed)
+            t0 = time.perf_counter()
+            try:
+                result = pipeline.measure(cloud)
+            except Exception as exc:
+                # Сбой на одном объекте не должен ронять весь бенчмарк:
+                # считаем объект непройденным и идём дальше.
+                print(f"{fmt(gt.dimensions, 'g'):<17}ERROR: {exc}")
+                continue
+            elapsed = (time.perf_counter() - t0) * 1000
 
-        print(
-            f"{fmt(metrics['gt_mm'], 'g'):<17}"
-            f"{fmt(metrics['pred_mm']):<23}"
-            f"{fmt(metrics['error_mm'], '+.1f'):<25}"
-            f"{elapsed:<10.1f}"
-            f"{'PASS' if metrics['pass'] else 'FAIL':<8}"
-        )
+            metrics = evaluate(gt, result["measurement"])
+            times.append(elapsed)
+            passed[shape] += int(metrics["pass"])
 
-    print("\nTiming:")
-    print(f"P50: {np.percentile(times, 50):.1f} ms")
-    print(f"P95: {np.percentile(times, 95):.1f} ms")
-    print(f"Max: {np.max(times):.1f} ms")
+            print(
+                f"{fmt(metrics['gt_mm'], 'g'):<17}"
+                f"{fmt(metrics['pred_mm']):<23}"
+                f"{fmt(metrics['error_mm'], '+.1f'):<25}"
+                f"{elapsed:<10.1f}"
+                f"{'PASS' if metrics['pass'] else 'FAIL':<8}"
+            )
+
+    if times:
+        print("\nTiming:")
+        print(f"P50: {np.percentile(times, 50):.1f} ms")
+        print(f"P95: {np.percentile(times, 95):.1f} ms")
+        print(f"Max: {np.max(times):.1f} ms")
+
+    # --- Итоговая статистика ---------------------------------------------
+    total = len(sizes) * len(shapes)
+    total_passed = sum(passed.values())
+
+    print(f"\nВсего объектов: {total}")
+    print(f"Успешно пройдено: {total_passed}/{total}\n")
+
+    labels = {shape: f"{plural(shape).capitalize()} passed" for shape in shapes}
+    width = max(len(label) for label in labels.values())
+
+    for shape in shapes:
+        print(f"{labels[shape]:<{width}} : {passed[shape]} / {len(sizes)}")
 
 
 if __name__ == "__main__":

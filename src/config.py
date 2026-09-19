@@ -4,7 +4,7 @@ from typing import Tuple
 @dataclass
 class Config:
     #Random-state
-    seed : int = 6767
+    seed : int = 676767
     #Object parameters
     object_dims : Tuple[float,float,float] = (
         100,        

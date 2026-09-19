@@ -27,7 +27,7 @@ class SyntheticScene:
       object sits on z=0
       object is rotated around Z
     """
-
+    SHAPES = ("box", "cylinder", "bottle")
     def __init__(self, cfg):
         self.cfg = cfg
         self.rng = np.random.default_rng(cfg.seed)
@@ -215,8 +215,8 @@ class SyntheticScene:
         return np.column_stack([x, y, z])
 
     def create_scene(self, dims_mm, yaw_deg=0.0, shape = "box"):
-        if shape not in ("box", "cylinder", "bottle"):
-            raise ValueError (f"Unknown shape : {shape}")
+        if shape not in self.SHAPES:
+            raise ValueError (f"Unknown shape : {shape}. Available : {self.SHAPES}")
         
         if shape == "cylinder":
             dims_mm = (dims_mm[0],dims_mm[0],dims_mm[2])
