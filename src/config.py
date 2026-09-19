@@ -3,17 +3,21 @@ from dataclasses import dataclass
 
 @dataclass
 class Config:
-    # Размеры конвейера
+    #Object parameters
+    OBJECT_DIMS = (300, 300, 300) #L,W,H
+    OBJECT_YAW = 30
+    
+    # Conveyour parameters
     conveyor_width_mm: float = 600.0
     conveyor_length_mm: float = 1200.0
 
-    # Имитируемая камера
+    # Camera parameters
     camera_height_mm: float = 600.0
     depth_noise_std_mm: float = 1.5
 
     # Point cloud
     object_points: int = 5000
-    conveyor_points: int = 900
+    conveyor_points: int = 3000
     outlier_points: int = 0
 
     # Filtering

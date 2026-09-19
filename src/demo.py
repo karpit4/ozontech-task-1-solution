@@ -8,8 +8,6 @@ from .pipeline import DimensioningPipeline
 from .evaluation import evaluate, print_report
 from .visualization import plot_result
 
-OBJECT_DIMS = (300, 300, 300) #L,W,H
-OBJECT_YAW = 90
 
 
 
@@ -22,8 +20,8 @@ def main():
 
 
     cloud, gt = scene.create_scene(
-        dims_mm=OBJECT_DIMS,
-        yaw_deg=OBJECT_YAW,
+        dims_mm=Config.OBJECT_DIMS,
+        yaw_deg=Config.OBJECT_YAW,
         irregular=True,
     )
 
