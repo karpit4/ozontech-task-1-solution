@@ -27,7 +27,7 @@ class SyntheticScene:
       object sits on z=0
       object is rotated around Z
     """
-    SHAPES = ("box", "cylinder", "bottle")
+    SHAPES = ("box", "cylinder", "bottle","sphere")
     
     def __init__(self, cfg):
         self.cfg = cfg
@@ -86,6 +86,38 @@ class SyntheticScene:
         points[:, 2] -= points[:, 2].min()
 
         # Depth noise.
+        points += self.rng.normal(
+            scale=self.cfg.depth_noise_std_mm,
+            size=points.shape,
+        )
+
+        return points
+
+    def make_sphere(self, dims_mm, yaw_deg=0.0):
+        """
+        dims_mm = (D, D, D)
+        """
+        D = dims_mm[0]
+        radius = D / 2.0
+
+        n = self.cfg.object_points
+
+        theta = self.rng.uniform(0, 2 * np.pi, n)
+        phi = np.arccos(
+            1 - 2 * self.rng.random(n)
+        )
+
+        x = radius * np.sin(phi) * np.cos(theta)
+        y = radius * np.sin(phi) * np.sin(theta)
+        z = radius * np.cos(phi)
+
+        points = np.column_stack([x, y, z])
+
+        R = self._rotation_z(yaw_deg)
+        points = points @ R.T
+
+        points[:, 2] -= points[:, 2].min()
+
         points += self.rng.normal(
             scale=self.cfg.depth_noise_std_mm,
             size=points.shape,
@@ -218,6 +250,8 @@ class SyntheticScene:
             obj = self.make_box(dims_mm, yaw_deg)
         elif shape == "cylinder":
             obj = self.make_cylinder(dims_mm, yaw_deg)
+        elif shape == "sphere":
+            obj = self.make_sphere(dims_mm,yaw_deg)
 
         conveyor = self.make_conveyor()
 

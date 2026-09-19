@@ -6,13 +6,13 @@ class Config:
     #Random-state
     seed : int = 676767
     #Object parameters
+    object_shape : str = "sphere"
     object_dims : Tuple[float,float,float] = (
         400,        
-        50,
-        100
+        400,
+        400
     ) #L, W, H
     object_yaw : float  = 30
-    object_shape : str = "cylinder"
     
     # Conveyour parameters
     conveyor_width_mm: float = max(object_dims[0],object_dims[1]) + 200
