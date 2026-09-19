@@ -7,15 +7,16 @@ class Config:
     seed : int = 6767
     #Object parameters
     object_dims : Tuple[float,float,float] = (
-        10,        
-        10,
-        10
+        100,        
+        100,
+        100
     ) #L, W, H
     object_yaw : float  = 30
+    object_shape : str = "bottle"
     
     # Conveyour parameters
     conveyor_width_mm: float = 600.0
-    conveyor_length_mm: float = 1200.0
+    conveyor_length_mm: float = 600.0
 
     # Camera parameters
     camera_height_mm: float = 600.0
