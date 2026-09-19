@@ -20,7 +20,7 @@ class Config:
 
     # Camera parameters
     camera_height_mm: float = 600.0
-    depth_noise_std_mm: float = 1.5
+    depth_noise_std_mm: float = 0.5
 
     # Point cloud
     object_points: int = 5000
@@ -28,8 +28,8 @@ class Config:
     outlier_points: int = 0
 
     # Filtering
-    voxel_size_mm: float = 2.0
-    ransac_distance_mm: float = 4.0
+    voxel_size_mm: float = 2
+    ransac_distance_mm: float = 2
     ransac_iterations: int = 1000
     sor_neighbors: int = 30
     sor_std_ratio: float = 1.5
