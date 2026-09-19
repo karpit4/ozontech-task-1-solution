@@ -116,7 +116,7 @@ class DimensioningPipeline:
         hull.compute_vertex_normals()
 
         obb = hull.get_minimal_oriented_bounding_box(
-            robust=True
+            robust=True 
         )
 
         # Open3D extent is in meters.

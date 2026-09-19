@@ -9,7 +9,8 @@ from .evaluation import evaluate, print_report
 from .visualization import plot_result
 
 
-
+#py -m src.demo
+#python -m src.demo
 
 def main():
 

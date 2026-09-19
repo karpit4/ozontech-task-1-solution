@@ -8,6 +8,10 @@ from .pipeline import DimensioningPipeline
 from .evaluation import evaluate
 
 
+#py -m src.benchmark
+#python -m src.benchmark
+
+
 def fmt(values, spec=".1f"):
     """Три числа -> '(409.7, 309.4, 299.9)' (обычные float, без np.float64)."""
     return "(" + ", ".join(format(float(v), spec) for v in values) + ")"
