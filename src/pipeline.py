@@ -79,8 +79,8 @@ class DimensioningPipeline:
 
         labels = np.asarray(
             cloud.cluster_dbscan(
-                eps=0.032,
-                min_points=20,
+                eps = self.cfg.cluster_eps_mm / 1000,
+                min_points = self.cfg.cluster_min_points,
                 print_progress=False,
             )
         )

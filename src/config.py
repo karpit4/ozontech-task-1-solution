@@ -1,11 +1,11 @@
 from dataclasses import dataclass
-
+from typing import Tuple 
 
 @dataclass
 class Config:
     #Object parameters
-    OBJECT_DIMS = (300, 300, 300) #L,W,H
-    OBJECT_YAW = 30
+    object_dims : Tuple[float,float,float] = (300, 300, 300) #L,W,H
+    object_yaw : float  = 30
     
     # Conveyour parameters
     conveyor_width_mm: float = 600.0
@@ -26,6 +26,10 @@ class Config:
     ransac_iterations: int = 1000
     sor_neighbors: int = 30
     sor_std_ratio: float = 1.5
+
+    #Clustering (keep_main_component)
+    cluster_eps_mm : float = 32
+    cluster_min_points : int = 20
 
     # Quality
     min_object_points: int = 100
