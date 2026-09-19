@@ -7,6 +7,8 @@ import numpy as np
 def _set_equal_aspect(ax, points):
     """Set approximately equal scale on X/Y/Z axes."""
 
+    ax.set_box_aspect((1,1,1))
+
     mins = points.min(axis=0)
     maxs = points.max(axis=0)
 
@@ -191,9 +193,8 @@ def plot_result(
     # Title.
     # ---------------------------------------------------------
 
-    gt_dims = np.round(gt.dimensions, 1)
-    measured_dims = np.round(prediction.dimensions, 1)
-
+    gt_dims = np.round(np.sort(gt.dimensions)[::-1], 1)
+    measured_dims = np.round(np.sort(prediction.dimensions)[::-1], 1)
     error = np.abs(
         measured_dims - gt_dims
     )
