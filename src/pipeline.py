@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 
 import numpy as np
-import open3d as o3d
-
 
 @dataclass
 class Measurement:
@@ -25,33 +23,30 @@ class DimensioningPipeline:
     def remove_conveyor_plane(self, cloud):
         distance = self.cfg.ransac_distance_mm / 1000.0
 
-        plane_model, inliers = cloud.segment_plane(
+        plane_model, _ = cloud.segment_plane(
             distance_threshold=distance,
             ransac_n=3,
             num_iterations=self.cfg.ransac_iterations,
         )
 
-        # Нормаль плоскости конвейера
-        normal = np.asarray(plane_model[:3], dtype=float)
-        normal /= np.linalg.norm(normal)
+        # Нормируем (a, b, c, d) так, чтобы |n| = 1
+        plane_model = np.asarray(plane_model, dtype=float)
+        plane_model /= np.linalg.norm(plane_model[:3])
 
-        # Переводим точки в numpy
+        # Камера смотрит сверху, поэтому нормаль должна смотреть вверх (+Z)
+        if plane_model[2] < 0:
+            plane_model = -plane_model
+
+        normal = plane_model[:3]
         points = np.asarray(cloud.points)
 
-        # Расстояние каждой точки до найденной плоскости
-        signed_distance = (
-            points @ normal + plane_model[3]
-        )
+        # Расстояние со знаком от каждой точки до плоскости ленты
+        signed_distance = points @ normal + plane_model[3]
 
-        # Оставляем только точки, расположенные выше конвейера.
-        # Небольшой допуск нужен из-за шума глубины.
+        # Оставляем только точки выше ленты (допуск на шум глубины)
         keep = signed_distance > distance
 
-        object_cloud = cloud.select_by_index(
-            np.where(keep)[0]
-        )
-
-        # Индексы точек, которые были удалены
+        object_cloud = cloud.select_by_index(np.where(keep)[0])
         removed = np.where(~keep)[0]
 
         return object_cloud, plane_model, removed
