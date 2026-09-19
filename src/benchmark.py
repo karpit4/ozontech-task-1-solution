@@ -7,9 +7,9 @@ from .scene import SyntheticScene
 from .pipeline import DimensioningPipeline
 from .evaluation import evaluate
 
-# --- Параметры бенчмарка ---------------------------------------------------
-# Число размеров = число объектов каждой формы.
-N_SIZES = 15
+# --- Benchmark parameters ---------------------------------------------------
+# N_SIZES - number of object of one shape
+N_SIZES = 25
 MIN_SIZE_MM = 10.0
 MAX_SIZE_MM = 400.0
 MAX_YAW_DEG = 90.0

@@ -22,12 +22,13 @@ class GroundTruth:
 
 class SyntheticScene:
     """
-    Синтетическая сцена:
+    Synthetic scene:
       z = 0                 -> conveyor
       object sits on z=0
       object is rotated around Z
     """
     SHAPES = ("box", "cylinder", "bottle")
+    
     def __init__(self, cfg):
         self.cfg = cfg
         self.rng = np.random.default_rng(cfg.seed)
@@ -94,11 +95,7 @@ class SyntheticScene:
 
     def make_bottle(self, dims_mm, yaw_deg=0.0):
         """
-        Коробка + цилиндрический выступ сверху.
-
-        Точки цилиндра лежат только на его поверхности: на боковой стенке
-        и на верхней крышке. Нижняя крышка не сэмплируется, потому что она
-        прилегает к коробке и снаружи не видна.
+        Box + little cylinder on top
         """
         L, W, H = dims_mm
 
@@ -110,14 +107,11 @@ class SyntheticScene:
 
         n_total = self.cfg.object_points // 20
 
-        # Делим точки между боковой стенкой и крышкой пропорционально площади,
-        # чтобы плотность на обеих частях была одинаковой.
         side_area = 2.0 * np.pi * radius * height
         top_area = np.pi * radius ** 2
         n_side = int(round(n_total * side_area / (side_area + top_area)))
         n_top = n_total - n_side
 
-        # Боковая стенка: равномерно по углу и по высоте.
         theta_side = self.rng.uniform(0, 2 * np.pi, n_side)
         side = np.column_stack([
             radius * np.cos(theta_side),
@@ -125,7 +119,6 @@ class SyntheticScene:
             box_h + self.rng.random(n_side) * height,
         ])
 
-        # Верхняя крышка: sqrt даёт равномерное распределение по площади диска.
         theta_top = self.rng.uniform(0, 2 * np.pi, n_top)
         r_top = radius * np.sqrt(self.rng.random(n_top))
         top = np.column_stack([
@@ -136,7 +129,6 @@ class SyntheticScene:
 
         bump = np.vstack([side, top])
 
-        # Тот же поворот и шум, что и у коробки.
         R = self._rotation_z(yaw_deg)
         bump = bump @ R.T
         bump += self.rng.normal(
@@ -148,26 +140,19 @@ class SyntheticScene:
 
     def make_cylinder(self, dims_mm, yaw_deg=0.0):
         """
-        Вертикальный цилиндр, стоящий на ленте.
-
-        dims_mm = (D, D, H): диаметр берётся из первого элемента,
-        высота из третьего. Точки лежат только на поверхности: на боковой
-        стенке и на верхней крышке. Нижняя крышка не сэмплируется, так как
-        она лежит на ленте и снаружи не видна.
+        dims_mm = (D, D, H)
         """
         L, _, H = dims_mm
         radius = L / 2.0
 
         n_total = self.cfg.object_points
 
-        # Делим точки между стенкой и крышкой пропорционально площади,
-        # чтобы плотность была одинаковой.
+
         side_area = 2.0 * np.pi * radius * H
         top_area = np.pi * radius ** 2
         n_side = int(round(n_total * side_area / (side_area + top_area)))
         n_top = n_total - n_side
 
-        # Боковая стенка: равномерно по углу и по высоте.
         theta_side = self.rng.uniform(0, 2 * np.pi, n_side)
         side = np.column_stack([
             radius * np.cos(theta_side),
@@ -175,7 +160,6 @@ class SyntheticScene:
             self.rng.random(n_side) * H,
         ])
 
-        # Верхняя крышка: sqrt даёт равномерное распределение по площади диска.
         theta_top = self.rng.uniform(0, 2 * np.pi, n_top)
         r_top = radius * np.sqrt(self.rng.random(n_top))
         top = np.column_stack([

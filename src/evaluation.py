@@ -9,7 +9,6 @@ def evaluate(gt, prediction):
     gt_dims = np.asarray(gt.dimensions, dtype=float)
     pred_dims = np.asarray(prediction.dimensions, dtype=float)
 
-    # Для демонстрации считаем L >= W >= H.
     gt_dims = np.sort(gt_dims)[::-1]
     pred_dims = np.sort(pred_dims)[::-1]
 
