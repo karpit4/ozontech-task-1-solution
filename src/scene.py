@@ -55,13 +55,13 @@ class SyntheticScene:
         return np.column_stack([x, y, z])
 
     def create_scene(self, dims_mm, yaw_deg=0.0, shape = "box"):
-        if shape not in self.SHAPES:
-            raise ValueError (f"Unknown shape : {shape}. Available : {self.SHAPES}")
         
         if shape in ("cylinder","pencil"):
             dims_mm = (dims_mm[0],dims_mm[0],dims_mm[2])
         elif shape == "sphere":
             dims_mm = (dims_mm[0],dims_mm[0],dims_mm[0])
+            
+        obj = self.objects.create(shape, dims_mm, yaw_deg)
         
         gt = GroundTruth(
             length_mm=dims_mm[0],
@@ -70,16 +70,6 @@ class SyntheticScene:
             yaw_deg=yaw_deg,
         )
 
-        if shape=="bottle":
-            obj = self.objects.make_bottle(dims_mm, yaw_deg)
-        elif shape == "box":
-            obj = self.objects.make_box(dims_mm, yaw_deg)
-        elif shape == "cylinder":
-            obj = self.objects.make_cylinder(dims_mm, yaw_deg)
-        elif shape == "sphere":
-            obj = self.objects.make_sphere(dims_mm,yaw_deg)
-        elif shape == "pencil":
-            obj = self.objects.make_pencil(dims_mm, yaw_deg)
 
         conveyor = self.make_conveyor()
 

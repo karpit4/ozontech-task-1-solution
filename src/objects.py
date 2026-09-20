@@ -5,12 +5,29 @@ class ObjectGenerator:
     def __init__(self,cfg):
         self.cfg = cfg 
         self.rng = np.random.default_rng(cfg.seed)
+        self.generators = {
+            "box": self.make_box,
+            "cylinder": self.make_cylinder,
+            "bottle": self.make_bottle,
+            "sphere": self.make_sphere,
+            "pencil": self.make_pencil,
+        }
+        
         
     @staticmethod
     def _rotation_z(deg):
         a = math.radians(deg)
         c, s = math.cos(a), math.sin(a)
         return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]], dtype=float)
+    
+    def create(self, shape, dims_mm, yaw_deg=0.0):
+        if shape not in self.generators:
+            raise ValueError(
+                f"Unknown shape: {shape}. "
+                f"Available: {tuple(self.generators)}"
+            )
+
+        return self.generators[shape](dims_mm, yaw_deg)
 
     def _make_box_points(self, dims_mm, n_points):
         L, W, H = dims_mm
