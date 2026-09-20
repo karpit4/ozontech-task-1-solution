@@ -1,38 +1,40 @@
-# Conveyor Dimensioning Demo
+# Object dimension measurement on a conveyor demo
 
-демо алгоритма:
+[Русская версия](README.ru.md)
 
-`RGB-D point cloud -> conveyor plane removal -> outlier filtering -> convex hull -> minimum-volume OBB -> L/W/H -> quality check`
+Demo of a conveyor-based object dimensioning algorithm:
 
-## Что умеет demo
+`RGB-D point cloud -> conveyor plane removal -> outlier filtering -> object extraction -> convex hull -> minimum-volume OBB -> L/W/H -> quality check`
 
-1. Генерирует синтетические 3D-объекты: `box`, `cylinder`, `bottle`, `sphere`, `pencil`.
-2. Имитирует шум depth-сенсора и конвейер с выбросами.
-3. Удаляет плоскость конвейера через RANSAC.
-4. Очищает облако точек с помощью voxel, radius и statistical filtering.
-5. Строит convex hull.
-6. Вычисляет минимальный OBB.
-7. Сравнивает результат с ground truth.
-8. Проверяет допуск `max(5%, 5 mm)`.
-9. Строит визуализацию pipeline.
-10. Позволяет запускать benchmark для объектов разных размеров и форм.
+## What the demo does
 
-## Структура проекта
+1. Generates synthetic 3D objects: `box`, `cylinder`, `bottle`, `sphere`, `pencil`.
+2. Simulates depth sensor noise and a moving conveyor.
+3. Removes the conveyor plane using RANSAC.
+4. Removes outliers using radius and statistical filtering.
+5. Extracts the main object component.
+6. Builds a convex hull.
+7. Computes a minimum-volume OBB.
+8. Compares the result with ground truth.
+9. Checks the tolerance `max(5%, 5 mm)`.
+10. Provides a benchmark for objects of different sizes and shapes.
+
+## Project structure
 
 ```text
 src/
-├── demo.py            — точка входа, запуск демонстрации
-├── scene.py           — генерация синтетической сцены и point cloud
-├── objects.py         — генерация 3D-объектов
-├── pipeline.py        — основной алгоритм измерения
-├── evaluation.py      — оценка точности измерений
-├── visualization.py   — визуализация point cloud и OBB
-├── benchmark.py       — тестирование производительности
-├── config.py          — параметры алгоритма
-└── __init__.py        — определяет src как Python-пакет
+├── demo.py            — demo entry point
+├── scene.py           — synthetic scene and point cloud generation
+├── objects.py         — 3D object generation
+├── pipeline.py        — main dimensioning algorithm
+├── evaluation.py      — measurement accuracy evaluation
+├── visualization.py   — point cloud and OBB visualization
+├── benchmark.py       — performance and accuracy benchmark
+├── config.py          — algorithm parameters
+└── __init__.py        — defines src as a Python package
 ```
 
-## Установка
+## Installation
 
 ```bash
 python -m venv .venv
@@ -46,18 +48,22 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Запуск
+## Running
 
-Демонстрация:
+Run the demo:
 
 ```bash
 python -m src.demo
 ```
 
-Benchmark:
+Run the benchmark:
 
 ```bash
 python -m src.benchmark
 ```
 
-После запуска demo результат визуализации появится в `output/dimensioning_result.png`.
+After running the demo, the visualization is saved to:
+
+```text
+output/dimensioning_result.png
+```
