@@ -60,6 +60,20 @@ class DimensioningPipeline:
         voxel = self.cfg.voxel_size_mm / 1000.0
         filtered = cloud.voxel_down_sample(voxel)
 
+        # 1. Радиусный фильтр с адаптивным радиусом. Масштаб берём из самого
+        #    облака (медиана расстояний до ближайшего соседа): медиана не
+        #    "слепнет" от выбросов, в отличие от среднего и σ в SOR.
+        min_neighbors = self.cfg.radius_outlier_min_neighbors
+        if len(filtered.points) > min_neighbors + 1:
+            nn = np.asarray(filtered.compute_nearest_neighbor_distance())
+            radius = self.cfg.radius_outlier_scale * float(np.median(nn))
+            if radius > 0.0:
+                filtered, _ = filtered.remove_radius_outlier(
+                    nb_points=min_neighbors,
+                    radius=radius,
+                )
+
+        # 2. SOR: мелкая чистка того, что осталось.
         if len(filtered.points) < self.cfg.sor_neighbors:
             return filtered
 
@@ -69,6 +83,7 @@ class DimensioningPipeline:
         )
 
         return filtered
+
 
     def keep_main_component(self, cloud):
         """

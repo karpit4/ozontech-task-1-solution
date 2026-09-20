@@ -8,11 +8,11 @@ class Config:
     #Object parameters
     object_shape : str = "bottle"
     object_dims : Tuple[float,float,float] = (
-        350,        
-        350,
-        350
+        279,        
+        279,
+        279
     ) #L, W, H
-    object_yaw : float  = 30
+    object_yaw : float  = 0
     
     # Conveyour parameters
     conveyor_width_mm: float = max(object_dims[0],object_dims[1]) + 200
@@ -25,7 +25,7 @@ class Config:
     # Point cloud
     object_points: int = 5000
     conveyor_points: int = 3000
-    outlier_points: int = 10
+    outlier_points: int = 40
 
     # Filtering
     voxel_size_mm: float = 2
@@ -33,6 +33,9 @@ class Config:
     ransac_iterations: int = 1000
     sor_neighbors: int = 30
     sor_std_ratio: float = 1.5
+    # Outlier removal: radius filter (runs before SOR)
+    radius_outlier_scale: float = 3.0       # радиус = scale × медиана расстояний до ближайшего соседа
+    radius_outlier_min_neighbors: int = 6   # минимум соседей в этом радиусе
 
     #Clustering (keep_main_component)
     cluster_eps_mm : float = 32
