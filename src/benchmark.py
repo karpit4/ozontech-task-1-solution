@@ -116,7 +116,8 @@ def main():
     total_passed = sum(passed.values())
 
     print(f"\nВсего объектов: {total}")
-    print(f"Успешно пройдено: {total_passed}/{total}\n")
+    print(f"Успешно пройдено: {total_passed}")
+    print(f"Доля успешно пройденных: {(total_passed/total):.2f}")
 
     labels = {shape: f"{plural(shape).capitalize()} passed" for shape in shapes}
     width = max(len(label) for label in labels.values())

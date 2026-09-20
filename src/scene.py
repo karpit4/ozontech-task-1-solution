@@ -39,12 +39,13 @@ class SyntheticScene:
         c, s = math.cos(a), math.sin(a)
         return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]], dtype=float)
 
-    def make_box(self, dims_mm, yaw_deg=0.0):
+    def _make_box_points(self, dims_mm, n_points):
         L, W, H = dims_mm
 
-        # Uniform samples on six faces.
-        n = max(self.cfg.object_points // 6, 100)
+        # Number of points per face.
+        n = max(n_points // 6, 100)
 
+        # Shared random coordinates.
         u = self.rng.random(n)
         v = self.rng.random(n)
 
@@ -55,7 +56,7 @@ class SyntheticScene:
             pts = np.column_stack([
                 np.full(n, sign * L / 2),
                 (u - 0.5) * W,
-                v * H,
+                (v - 0.5) * H,
             ])
             faces.append(pts)
 
@@ -64,21 +65,30 @@ class SyntheticScene:
             pts = np.column_stack([
                 (u - 0.5) * L,
                 np.full(n, sign * W / 2),
-                v * H,
+                (v - 0.5) * H,
             ])
             faces.append(pts)
 
-        # z = 0 / H
-        for sign in (0, 1):
+        # z = +/- H/2
+        for sign in (-1, 1):
             pts = np.column_stack([
                 (u - 0.5) * L,
                 (v - 0.5) * W,
-                np.full(n, sign * H),
+                np.full(n, sign * H / 2),
             ])
             faces.append(pts)
 
-        points = np.vstack(faces)
+        return np.vstack(faces)
 
+    def make_box(self, dims_mm, yaw_deg=0.0):
+        L, W, H = dims_mm
+
+        points = self._make_box_points(
+            dims_mm,
+            self.cfg.object_points
+        )
+
+        # Rotate around Z.
         R = self._rotation_z(yaw_deg)
         points = points @ R.T
 

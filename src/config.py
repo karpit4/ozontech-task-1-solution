@@ -4,13 +4,13 @@ from typing import Tuple
 @dataclass
 class Config:
     #Random-state
-    seed : int = 676767
+    seed : int = 6234237
     #Object parameters
-    object_shape : str = "sphere"
+    object_shape : str = "bottle"
     object_dims : Tuple[float,float,float] = (
-        200,        
-        200,
-        400
+        350,        
+        350,
+        350
     ) #L, W, H
     object_yaw : float  = 30
     
@@ -25,7 +25,7 @@ class Config:
     # Point cloud
     object_points: int = 5000
     conveyor_points: int = 3000
-    outlier_points: int = 0
+    outlier_points: int = 10
 
     # Filtering
     voxel_size_mm: float = 2
