@@ -8,9 +8,9 @@ class Config:
     #Object parameters
     object_shape : str = "bottle"
     object_dims : Tuple[float,float,float] = (
-        279,        
-        279,
-        279
+        150,        
+        150,
+        700
     ) #L, W, H
     object_yaw : float  = 0
     
