@@ -28,7 +28,6 @@ class SyntheticScene:
       object sits on z=0
       object is rotated around Z
     """
-    SHAPES = ("box", "cylinder", "bottle","sphere","pencil")
     
     def __init__(self, cfg):
         self.cfg = cfg
