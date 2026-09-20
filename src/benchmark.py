@@ -6,6 +6,7 @@ from .config import Config
 from .scene import SyntheticScene
 from .pipeline import DimensioningPipeline
 from .evaluation import evaluate
+from .objects import ObjectGenerator
 
 # --- Benchmark parameters ---------------------------------------------------
 # N_SIZES - number of object of one shape
@@ -42,8 +43,9 @@ def main():
     cfg = Config()
     scene = SyntheticScene(cfg)
     pipeline = DimensioningPipeline(cfg)
+    objects = ObjectGenerator(cfg)
 
-    shapes = scene.SHAPES
+    shapes = list(objects.generators.keys())
     sizes = make_sizes()
 
     # Углы поворота берём из отдельного генератора (сид сдвинут на 1, чтобы
