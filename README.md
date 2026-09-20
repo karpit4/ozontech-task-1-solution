@@ -66,4 +66,8 @@ After running the demo, the visualization is saved to:
 
 ```text
 output/dimensioning_result.png
+<<<<<<< HEAD
 ```
+=======
+```
+>>>>>>> ab96f86d8d25ab28dca56a5abe2b86886257833a
