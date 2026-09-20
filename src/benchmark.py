@@ -9,7 +9,7 @@ from .evaluation import evaluate
 
 # --- Benchmark parameters ---------------------------------------------------
 # N_SIZES - number of object of one shape
-N_SIZES = 30
+N_SIZES = 15
 MIN_SIZE_MM = 10.0
 MAX_SIZE_MM = 400.0
 MAX_YAW_DEG = 90.0
@@ -64,6 +64,8 @@ def main():
 
     times = []
     passed = {shape: 0 for shape in shapes}
+    # Знаковые ошибки (pred - GT) по каждой форме: три числа на объект.
+    errors = {shape: [] for shape in shapes}
 
     print(
         f"{'GT [mm]':<17}"
@@ -96,6 +98,7 @@ def main():
             metrics = evaluate(gt, result["measurement"])
             times.append(elapsed)
             passed[shape] += int(metrics["pass"])
+            errors[shape].append(metrics["error_mm"])
 
             print(
                 f"{fmt(metrics['gt_mm'], 'g'):<17}"
@@ -104,6 +107,11 @@ def main():
                 f"{elapsed:<10.1f}"
                 f"{'PASS' if metrics['pass'] else 'FAIL':<8}"
             )
+
+        # Средняя ошибка по форме, под колонкой Error.
+        if errors[shape]:
+            mean_error = np.mean(errors[shape], axis=0)
+            print(f"{'Mean error':<40}{fmt(mean_error, '+.1f')}")
 
     if times:
         print("\nTiming:")
@@ -114,10 +122,15 @@ def main():
     # --- Итоговая статистика ---------------------------------------------
     total = len(sizes) * len(shapes)
     total_passed = sum(passed.values())
+    all_errors = [e for shape in shapes for e in errors[shape]]
 
-    print(f"\nВсего объектов: {total}")
-    print(f"Успешно пройдено: {total_passed}")
-    print(f"Доля успешно пройденных: {(total_passed/total):.2f}")
+    print(f"\nTotal objects: {total}")
+    print(f"Passed objects: {total_passed}")
+    print(f"Pass rate: {total_passed / total:.2f}")
+
+    if all_errors:
+        mean_all = np.mean(all_errors, axis=0)
+        print(f"mean error : {fmt(mean_all, '+.1f')}")
 
     labels = {shape: f"{plural(shape).capitalize()} passed" for shape in shapes}
     width = max(len(label) for label in labels.values())

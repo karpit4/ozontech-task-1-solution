@@ -120,9 +120,12 @@ class DimensioningPipeline:
         newcloud = cloud.select_by_index(indices)
         return newcloud
 
-    def minimum_obb(self, cloud):
+    def minimum_obb(self, cloud, plane_normal):
         """
         Open3D MINIMAL_JYLANKI.
+
+        plane_normal - единичная нормаль ленты, направленная вверх (+Z).
+        По ней находим вертикальную ось бокса, чтобы поправить только высоту.
         """
         if len(cloud.points) < 4:
             raise ValueError("Not enough points for OBB.")
@@ -131,15 +134,33 @@ class DimensioningPipeline:
         hull.compute_vertex_normals()
 
         obb = hull.get_minimal_oriented_bounding_box(
-            robust=True 
+            robust=True
         )
 
-        # Open3D extent is in meters.
-        dims_mm = np.asarray(obb.extent) * 1000.0
+        # Open3D: center и extent в метрах, столбцы R - оси бокса.
+        center = np.asarray(obb.center, dtype=float)
+        R = np.asarray(obb.R, dtype=float)
+        extent = np.asarray(obb.extent, dtype=float).copy()
+
+        # Поправка на срез основания: слой толщиной ~ransac_distance_mm мы
+        # выбросили вместе с лентой, поэтому высота систематически занижена.
+        correction = self.cfg.height_correction_mm / 1000.0
+        if correction != 0.0:
+            # Вертикальная ось бокса - та, что лучше всего совпадает с
+            # нормалью ленты (а не просто наименьший размер).
+            alignment = R.T @ np.asarray(plane_normal, dtype=float)
+            k = int(np.argmax(np.abs(alignment)))
+            up = R[:, k] * np.sign(alignment[k])  # эта ось, направленная вверх
+
+            # Растим бокс вниз, к ленте: там и лежал срезанный слой.
+            extent[k] += correction
+            center = center - 0.5 * correction * up
+
+            obb = o3d.geometry.OrientedBoundingBox(center, R, extent)
 
         # Return sorted dimensions. The semantic labels L/W/H are assigned
         # by descending size for this demo.
-        dims_mm = np.sort(dims_mm)[::-1]
+        dims_mm = np.sort(extent * 1000.0)[::-1]
 
         return Measurement(
             length_mm=float(dims_mm[0]),
@@ -153,7 +174,7 @@ class DimensioningPipeline:
 
         filtered = self.filter_outliers(object_cloud)
         # filtered = self.keep_main_component(filtered)
-        measurement, obb, hull = self.minimum_obb(filtered)
+        measurement, obb, hull = self.minimum_obb(filtered, plane_model[:3])
 
         return {
             "measurement": measurement,

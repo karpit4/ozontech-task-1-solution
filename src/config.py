@@ -33,6 +33,9 @@ class Config:
     ransac_iterations: int = 1000
     sor_neighbors: int = 30
     sor_std_ratio: float = 1.5
+    
+    height_correction_mm: float = 3.0
+    
     # Outlier removal: radius filter (runs before SOR)
     radius_outlier_scale: float = 3.0       # радиус = scale × медиана расстояний до ближайшего соседа
     radius_outlier_min_neighbors: int = 6   # минимум соседей в этом радиусе
