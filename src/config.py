@@ -4,7 +4,7 @@ from typing import Tuple
 @dataclass
 class Config:
     #Random-state
-    seed : int = 6234237
+    seed : int = 62342221
     #Object parameters
     object_shape : str = "bottle"
     object_dims : Tuple[float,float,float] = (
@@ -34,6 +34,8 @@ class Config:
     sor_neighbors: int = 30
     sor_std_ratio: float = 1.5
     
+    length_correction_mm : float = -3.5
+    width_correction_mm : float = -1.5
     height_correction_mm: float = 3.0
     
     # Outlier removal: radius filter (runs before SOR)

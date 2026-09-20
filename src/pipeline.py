@@ -125,7 +125,8 @@ class DimensioningPipeline:
         Open3D MINIMAL_JYLANKI.
 
         plane_normal - единичная нормаль ленты, направленная вверх (+Z).
-        По ней находим вертикальную ось бокса, чтобы поправить только высоту.
+        По ней находим вертикальную ось бокса: высота, длина и ширина
+        поправляются по-разному.
         """
         if len(cloud.points) < 4:
             raise ValueError("Not enough points for OBB.")
@@ -142,19 +143,35 @@ class DimensioningPipeline:
         R = np.asarray(obb.R, dtype=float)
         extent = np.asarray(obb.extent, dtype=float).copy()
 
-        # Поправка на срез основания: слой толщиной ~ransac_distance_mm мы
-        # выбросили вместе с лентой, поэтому высота систематически занижена.
-        correction = self.cfg.height_correction_mm / 1000.0
-        if correction != 0.0:
+        # Поправки прибавляются к измеренным размерам: положительная
+        # увеличивает размер, отрицательная уменьшает (в метрах).
+        height_corr = self.cfg.height_correction_mm / 1000.0
+        length_corr = self.cfg.length_correction_mm / 1000.0
+        width_corr = self.cfg.width_correction_mm / 1000.0
+
+        if height_corr != 0.0 or length_corr != 0.0 or width_corr != 0.0:
             # Вертикальная ось бокса - та, что лучше всего совпадает с
             # нормалью ленты (а не просто наименьший размер).
             alignment = R.T @ np.asarray(plane_normal, dtype=float)
             k = int(np.argmax(np.abs(alignment)))
             up = R[:, k] * np.sign(alignment[k])  # эта ось, направленная вверх
 
-            # Растим бокс вниз, к ленте: там и лежал срезанный слой.
-            extent[k] += correction
-            center = center - 0.5 * correction * up
+            # Две оставшиеся оси горизонтальные: большая из них - длина,
+            # меньшая - ширина.
+            a, b = [i for i in range(3) if i != k]
+            long_i, short_i = (a, b) if extent[a] >= extent[b] else (b, a)
+
+            old_height = extent[k]
+            extent[k] += height_corr
+            extent[long_i] += length_corr
+            extent[short_i] += width_corr
+
+            # Размер не должен стать нулевым или отрицательным.
+            extent = np.maximum(extent, 1e-3)
+
+            # Высота: срезанный слой лежал у ленты, поэтому растим бокс вниз.
+            # Длина и ширина меняются симметрично относительно центра.
+            center = center - 0.5 * (extent[k] - old_height) * up
 
             obb = o3d.geometry.OrientedBoundingBox(center, R, extent)
 
